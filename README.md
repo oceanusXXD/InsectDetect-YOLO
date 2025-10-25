@@ -11,10 +11,11 @@
 ```bat
 # 创建并激活虚拟环境
 python -m venv venv
-> - 如果使用的是 Anaconda，可以跳过此步骤，直接在 bat 文件中使用 `conda activate 环境名`。
-> - 所有 `.bat` 文件默认使用 `.\venv\Scripts\activate`。
 .\venv\Scripts\activate
 ```
+> - 如果使用的是 Anaconda，可以跳过此步骤，直接在 bat 文件中使用 `conda activate 环境名`。
+> - 所有 `.bat` 文件默认使用 `.\venv\Scripts\activate`。
+
 ##  安装依赖
 # 安装项目所需依赖
 ```bat
@@ -33,7 +34,7 @@ pip install ultralytics torch torchvision opencv-python pandas numpy matplotlib 
 - 作用：启动训练流程。
 - 默认数据文件路径：`InsectDetect-YOLO\data\data.yaml`
 - 默认模型：`yolo11x.pt`
-- 默认任务：`classify`
+- 默认任务：`detect`
 - 模型结果保存目录：`runs\train\crop_pests_时间戳\`
 ```
 ---
@@ -45,7 +46,7 @@ pip install ultralytics torch torchvision opencv-python pandas numpy matplotlib 
 
 - 默认输入路径：`InsectDetect-YOLO\data\test_images\`
 
-- 默认任务：`classify`
+- 默认任务：`detect`
 
 > 📍可根据需要修改：
 > - `--model` → 模型权重文件路径  
