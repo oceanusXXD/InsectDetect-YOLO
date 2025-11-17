@@ -1,11 +1,3 @@
-"""
-predict.py — YOLOv11 推理 / 评测脚本
-- 单图 / 文件夹 / 视频推理（保存渲染结果）
-- --eval-data data.yaml ：在数据集上跑官方 evaluator（检测 mAP）
-- --cls-model <cls.pt> ：二阶段（检→裁→分类器），统计 accuracy / precision / recall / F1 / AUC(OVR)
-- 记录预测/评测耗时，写入 timings.json
-"""
-
 import os
 import json
 import time
@@ -14,7 +6,6 @@ from datetime import datetime
 
 import numpy as np
 import cv2
-import torch
 from sklearn.metrics import (
     precision_recall_fscore_support, accuracy_score, roc_auc_score
 )
@@ -60,18 +51,18 @@ def run_predict(
     show_labels=True,
     show_conf=True,
     line_width=None,
-    eval_data_yaml=None,   # 数据集评测（检测）
-    cls_model_path=None,   # 二阶段（检→裁→分类器）
+    eval_data_yaml=None,   # Data config for detection evaluation
+    cls_model_path=None,   # Path for second-stage classifier
 ):
     if name is None:
         name = f"pred_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     save_dir = Path(project) / name
 
-    print(f"[INFO] 加载检测模型: {model_path}")
+    print(f"[INFO] Loading detection model: {model_path}")
     det = YOLO(model_path)
 
-    # ---------- 普通推理 ----------
-    print(f"[INFO] 开始推理: source={source}")
+    # Standard Inference
+    print(f"[INFO] Starting inference: source={source}")
     t0 = time.time()
     results = det.predict(
         source=source,
@@ -89,13 +80,13 @@ def run_predict(
         verbose=True
     )
     pred_seconds = round(time.time() - t0, 3)
-    print(f"[INFO] 推理完成，输出目录: {save_dir}")
+    print(f"[INFO] Inference complete. Output directory: {save_dir}")
 
     timings = {"predict_seconds": pred_seconds}
 
-    # ---------- 数据集评测（检测） ----------
+    # Dataset Evaluation (Detection)
     if eval_data_yaml:
-        print(f"[INFO] 评测数据集（官方 evaluator）: {eval_data_yaml}")
+        print(f"[INFO] Evaluating dataset (official evaluator): {eval_data_yaml}")
         t1 = time.time()
         m = det.val(data=eval_data_yaml, imgsz=imgsz, device=device, plots=True)
         timings["dataset_eval_seconds"] = round(time.time() - t1, 3)
@@ -106,15 +97,15 @@ def run_predict(
             mr=float(getattr(m.box, 'mr', np.nan)) if hasattr(m, 'box') else np.nan,
         )
         _write_json(save_dir / "dataset_eval_metrics.json", summary)
-        print(f"[INFO] ✅ 数据集评测完成: {summary}")
+        print(f"[INFO] ✅ Dataset evaluation complete: {summary}")
 
-    # ---------- 二阶段（检→裁→分类器，多分类 AUC=OvR） ----------
+    # Two-Stage Pipeline (Detect -> Crop -> Classify)
     if cls_model_path is not None:
-        print(f"[INFO] 启用二阶段：分类器 = {cls_model_path}")
+        print(f"[INFO] Two-stage pipeline enabled: classifier = {cls_model_path}")
         cls_model = YOLO(cls_model_path)
 
-        y_true = []   # 检测出的类别，作为对分类器的一致性参考（方法对比）
-        y_proba = []  # 分类器输出的全类概率
+        y_true = []   # Ground truth classes from detector (for consistency check)
+        y_proba = []  # Classifier output probabilities
 
         for r in results:
             if not hasattr(r, 'boxes') or r.boxes is None or len(r.boxes) == 0:
@@ -147,7 +138,7 @@ def run_predict(
             precision, recall, f1, _ = precision_recall_fscore_support(
                 y_true, y_pred, average='macro', zero_division=0
             )
-            # 多分类 AUC（One-vs-Rest）
+            # Multi-class AUC (One-vs-Rest)
             n_classes = y_proba.shape[1]
             y_true_ovr = np.eye(n_classes)[y_true]
             try:
@@ -163,18 +154,18 @@ def run_predict(
                 auc=float(auc)
             )
             _write_json(save_dir / "twostage_metrics.json", metrics)
-            print(f"[INFO] 二阶段分类指标: {metrics}")
+            print(f"[INFO] Two-stage classification metrics: {metrics}")
         else:
-            print("[WARN] 二阶段没有产生裁剪或预测，无法统计分类指标。")
+            print("[WARN] No crops or predictions generated for two-stage evaluation.")
 
-    # ---------- 写入耗时 ----------
+    # Save Timings
     _write_json(save_dir / "timings.json", timings)
     return results
 
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser(description="YOLOv11 推理 / 评测脚本")
+    parser = argparse.ArgumentParser(description="YOLOv11 Inference / Evaluation Script")
     parser.add_argument('--model', type=str, default='runs/train/crop_pests/weights/best.pt')
     parser.add_argument('--source', type=str, default='data/test_images')
     parser.add_argument('--imgsz', type=int, default=896)
@@ -184,8 +175,8 @@ if __name__ == '__main__':
     parser.add_argument('--project', type=str, default='runs/predict')
     parser.add_argument('--name', type=str, default=None)
     parser.add_argument('--exist-ok', action='store_true')
-    parser.add_argument('--eval-data', type=str, default=None, help='在数据集上评测（检测 mAP）')
-    parser.add_argument('--cls-model', type=str, default=None, help='二阶段分类器（YOLO-CLS 权重）')
+    parser.add_argument('--eval-data', type=str, default=None, help='Run evaluation on dataset (mAP)')
+    parser.add_argument('--cls-model', type=str, default=None, help='Two-stage classifier weights')
     args = parser.parse_args()
 
     run_predict(
