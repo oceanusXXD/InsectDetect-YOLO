@@ -97,7 +97,7 @@ def run_predict(
             mr=float(getattr(m.box, 'mr', np.nan)) if hasattr(m, 'box') else np.nan,
         )
         _write_json(save_dir / "dataset_eval_metrics.json", summary)
-        print(f"[INFO] ✅ Dataset evaluation complete: {summary}")
+        print(f"[INFO] Dataset evaluation complete: {summary}")
 
     # Two-Stage Pipeline (Detect -> Crop -> Classify)
     if cls_model_path is not None:

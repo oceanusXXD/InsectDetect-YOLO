@@ -11,7 +11,7 @@ import torch
 from ultralytics import YOLO
 
 
-# ------------------------- TensorBoard -------------------------
+# TensorBoard
 def _start_tb_when_ready(log_dir: Path, port: int = 6006):
     import socket
     log_dir = Path(log_dir)
@@ -37,12 +37,12 @@ def _start_tb_when_ready(log_dir: Path, port: int = 6006):
              "--port", str(port), "--reload_multifile", "true"],
             shell=True
         )
-        print(f"[INFO] ✅ TensorBoard: http://localhost:{port}")
+        print(f"[INFO] TensorBoard: http://localhost:{port}")
     except Exception as e:
         print(f"[ERROR] Failed to start TensorBoard: {e}")
 
 
-# ------------------------- Metrics/Timing Export -------------------------
+#Metrics/Timing Export
 def _dump_metrics(save_dir: Path, metrics_obj, task: str):
     save_dir.mkdir(parents=True, exist_ok=True)
     d = {}
@@ -77,7 +77,7 @@ def _dump_timings(save_dir: Path, timings: dict):
     print(f"[INFO] Timings exported to: {save_dir}/timings.json")
 
 
-# ------------------------- Training Entry Point -------------------------
+# Training Entry Point
 def train_yolo(
     task='detect',
     model_size='x',
